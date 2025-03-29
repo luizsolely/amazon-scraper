@@ -31,9 +31,13 @@ The application exposes the following API endpoints:
 
 To get started with this project, follow these steps:
 
-1. Clone the repository;
+1. Install Bun with:
+  ```
+  curl -fsSL https://bun.sh/install | bash
+  ```
+3. Clone the repository;
 
-2. Install dependencies:
+4. Install dependencies:
 
 - **Backend** (Navigate to the `back` folder):
   ```
@@ -74,5 +78,4 @@ To get started with this project, follow these steps:
 
 - **Backend**: Bun, Express, Axios, JSDOM, CORS
 - **Frontend**: HTML, CSS, JavaScript
-- **Scraping**: Amazon Brazil and USA product data
 - **Scraping**: Amazon Brazil and USA product data
