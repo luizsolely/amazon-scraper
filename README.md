@@ -1,56 +1,78 @@
-# Amazon Scraper Project
+# Amazon Scraper
 
-This project is a web scraper for Amazon. It scrapes product details from Amazon using a backend built with `Bun` and frontend in `HTML`, `CSS`, and `JavaScript`.
+This is a project that scrapes Amazon product information (title, image, rating, and price) for the Brazilian (BR) and US regions.
 
-## Installation and Setup
+## Endpoints
 
-### Backend (Bun)
+The application exposes the following API endpoints:
 
-1. Navigate to the `back` directory:
+1. **`/scrape-br`**
+   - **Method**: GET
+   - **Description**: Scrapes Amazon Brazil (amazon.com.br) for products based on the provided keyword.
+   - **Query parameter**: 
+     - `keyword` (required) – The search term for the Amazon search.
+   - **Example**: 
+     ```
+     http://localhost:3000/scrape-br?keyword=laptop
+     ```
 
-    ```bash
-    cd BunProject/back
-    ```
+2. **`/scrape-us`**
+   - **Method**: GET
+   - **Description**: Scrapes Amazon USA (amazon.com) for products based on the provided keyword.
+   - **Query parameter**: 
+     - `keyword` (required) – The search term for the Amazon search.
+   - **Example**: 
+     ```
+     http://localhost:3000/scrape-us?keyword=laptop
+     ```
+
+
+## Installation
+
+To get started with this project, follow these steps:
+
+1. Clone the repository;
 
 2. Install dependencies:
 
-    ```bash
-    bun install
-    ```
+- **Backend** (Navigate to the `back` folder):
+  ```
+  cd back
+  bun install
+  ```
 
-3. Start the backend server:
+- **Frontend** (Navigate to the `front` folder):
+  ```
+  cd front
+  bun install
+  ```
 
-    ```bash
-    bun server
-    ```
+## Running the Project
 
-The backend will run on `http://localhost:3000`.
+1. To start the backend server:
 
-### Frontend
+- In the `back` folder, run:
+  ```
+  bun run server.js
+  ```
+- The backend server will be running on `http://localhost:3000`.
 
-1. Navigate to the `front` directory:
+2. To run the frontend:
 
-    ```bash
-    cd BunProject/front
-    ```
+- In the `front` folder, run:
+   ```
+  bun run dev
+  ```
+- The backend server will be running on `http://localhost:5173`.
 
-2. Install dependencies:
+## Usage
 
-    ```bash
-    bun install
-    ```
+- On the frontend, enter a keyword in the search box and click the respective button (`Search Brazil` or `Search US`) to scrape Amazon products.
+- The results will be displayed on the same page with product details including title, image, price, and rating.
 
-3. Start the frontend:
+## Technologies Used
 
-    ```bash
-    bun run dev
-    ```
-
-The frontend will run on `http://localhost:5173`.
-
-## How to Use
-
-1. Open the frontend in your browser (`http://localhost:5173`).
-2. Enter a search term in the search bar.
-3. Click either the "Scrape US" or "Scrape BR" button.
-4. Results will appear below, showing product details such as price and rating.
+- **Backend**: Bun, Express, Axios, JSDOM, CORS
+- **Frontend**: HTML, CSS, JavaScript
+- **Scraping**: Amazon Brazil and USA product data
+- **Scraping**: Amazon Brazil and USA product data
