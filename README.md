@@ -21,7 +21,7 @@ This project is a web scraper for Amazon. It scrapes product details from Amazon
 3. Start the backend server:
 
     ```bash
-    bun run dev
+    bun server
     ```
 
 The backend will run on `http://localhost:3000`.
@@ -54,6 +54,3 @@ The frontend will run on `http://localhost:5173`.
 2. Enter a search term in the search bar.
 3. Click either the "Scrape US" or "Scrape BR" button.
 4. Results will appear below, showing product details such as price and rating.
-
-## Folder Structure
-
