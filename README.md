@@ -13,7 +13,7 @@ The application exposes the following API endpoints:
      - `keyword` (required) – The search term for the Amazon search.
    - **Example**: 
      ```
-     http://localhost:3000/scrape-br?keyword=laptop
+     http://localhost:3000/scrape-br?keyword=notebook
      ```
 
 2. **`/scrape-us`**
@@ -31,9 +31,10 @@ The application exposes the following API endpoints:
 
 To get started with this project, follow these steps:
 
-1. Install Bun with:
+1. Install Bun with: https://bun.sh/
   ```
-  curl -fsSL https://bun.sh/install | bash
+  LINUX: curl -fsSL https://bun.sh/install | bash
+  WINDOWS: powershell -c "irm bun.sh/install.ps1 | iex"
   ```
 3. Clone the repository;
 
@@ -76,6 +77,6 @@ To get started with this project, follow these steps:
 
 ## Technologies Used
 
-- **Backend**: Bun, Express, Axios, JSDOM, CORS
+- **Backend**: Puppeteer, Bun, Express, Axios, JSDOM, CORS
 - **Frontend**: HTML, CSS, JavaScript
 - **Scraping**: Amazon Brazil and USA product data
