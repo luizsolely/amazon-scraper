@@ -1,7 +1,7 @@
 import express from "express";
-import axios from "axios";
 import { JSDOM } from "jsdom";
 import cors from "cors";
+import puppeteer from "puppeteer";
 
 const app = express();
 const PORT = 3000;
@@ -12,113 +12,82 @@ app.use(cors({
     allowedHeaders: ["Content-Type"]
 }));
 
-async function scrapeAmazonBR(keyword) {
-    const url = `https://www.amazon.com.br/s?k=${encodeURIComponent(keyword)}`;
+// Headers específicos por domínio
+function getAmazonHeaders(domain) {
+    const base = {
+        "Accept-Encoding": "gzip, deflate, br",
+        "Connection": "keep-alive"
+    };
 
-    try {
-        const { data } = await axios.get(url, {
-            headers: {
-                // Cabeçalho HTTP para parecer uma requisição real
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-                "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
-                "Accept-Encoding": "gzip, deflate, br",
-                "Referer": "https://www.amazon.com.br/",
-                "Connection": "keep-alive",
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8"
-            }
-        });
-
-        // Criação do objeto DOM para manipulação da página
-        const dom = new JSDOM(data);
-        const document = dom.window.document;
-
-        let products = [];
-
-        // Loop sobre os resultados da busca
-        document.querySelectorAll('[data-component-type="s-search-result"]').forEach(product => {
-            const title = product.querySelector("h2 span")?.textContent?.trim();
-            const image = product.querySelector("img")?.src;
-            const rating = product.querySelector(".a-icon-star-small span")?.textContent?.trim();
-            const price = product.querySelector(".a-offscreen")?.textContent?.trim();
-
-            // Verificação antes de adicionar ao array
-            if (title && image && rating && price) {
-                products.push({ title, image, rating, price });
-            }
-        });
-
-        return products;
-
-    } catch (error) {
-        console.error("❌ Erro ao acessar a página:", error.response?.status || error.message);
-        return [];
-    }
+    return domain === 'com.br' ? {
+        ...base,
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+        "Accept-Language": "pt-BR,pt;q=0.9",
+        "Referer": "https://www.amazon.com.br/"
+    } : {
+        ...base,
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Referer": "https://www.amazon.com/"
+    };
 }
 
+// Função única com Puppeteer (para ambos domínios)
+async function scrapeAmazon(keyword, domain = 'com.br') {
+    const browser = await puppeteer.launch();
+    const page = await browser.newPage();
+    
+    // Configura headers específicos
+    await page.setExtraHTTPHeaders(getAmazonHeaders(domain));
+    await page.setUserAgent(getAmazonHeaders(domain)["User-Agent"]);
+    
+    await page.goto(`https://www.amazon.${domain}/s?k=${encodeURIComponent(keyword)}`, {
+        waitUntil: 'domcontentloaded',
+        timeout: 30000
+    });
+
+    const content = await page.content();
+    const dom = new JSDOM(content);
+    const document = dom.window.document;
+
+    let products = [];
+    document.querySelectorAll('[data-component-type="s-search-result"]').forEach(product => {
+        const title = product.querySelector("h2 span")?.textContent?.trim();
+        const image = product.querySelector("img")?.src;
+        const rating = product.querySelector(".a-icon-star-small span")?.textContent?.trim();
+        const price = product.querySelector(".a-offscreen")?.textContent?.trim();
+
+        if (title && image && price) {
+            products.push({ 
+                title, 
+                image, 
+                rating: rating || "Sem avaliação", 
+                price 
+            });
+        }
+    });
+
+    await browser.close();
+    return products;
+}
+
+// Rotas originais (inalteradas)
 app.get("/scrape-br", async (req, res) => {
     const { keyword } = req.query;
-    if (!keyword) {
-        return res.status(400).json({ error: "A palavra-chave é obrigatória" });
-    }
-
-    const data = await scrapeAmazonBR(keyword);
+    if (!keyword) return res.status(400).json({ error: "Palavra-chave obrigatória" });
+    
+    const data = await scrapeAmazon(keyword, 'com.br');
     res.json(data);
 });
 
-async function scrapeAmazonUS(keyword) {
-    const url = `https://www.amazon.com/s?k=${encodeURIComponent(keyword)}`;
-
-    try {
-        const { data } = await axios.get(url, {
-            headers: {
-                // HTTP header to mimic a real request
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
-                "Accept-Language": "en-US,en;q=0.9",
-                "Accept-Encoding": "gzip, deflate, br",
-                "Referer": "https://www.amazon.com.br/",
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-                "DNT": "1",
-                "Connection": "keep-alive"
-            }
-        });
-
-        // Create DOM object to manipulate the page
-        const dom = new JSDOM(data);
-        const document = dom.window.document;
-
-        let products = [];
-
-        // Loop over search results
-        document.querySelectorAll('[data-component-type="s-search-result"]').forEach(product => {
-            const title = product.querySelector("h2.a-size-medium.a-spacing-none.a-color-base.a-text-normal span")?.textContent?.trim();
-            const image = product.querySelector("img")?.src;
-            const rating = product.querySelector(".a-icon-star-small span")?.textContent?.trim();
-            const price = product.querySelector(".a-offscreen")?.textContent?.trim();
-
-            // Check before adding to array
-            if (title && image && rating && price) {
-                products.push({ title, image, rating, price });
-            }
-        });
-
-        return products;
-
-    } catch (error) {
-        console.error("❌ Error accessing the page:", error.response?.status, error.message);
-        return [];
-    }
-}
-
 app.get("/scrape-us", async (req, res) => {
     const { keyword } = req.query;
-    if (!keyword) {
-        return res.status(400).json({ error: "Keyword is required" });
-    }
-
-    const data = await scrapeAmazonUS(keyword);
+    if (!keyword) return res.status(400).json({ error: "Keyword required" });
+    
+    const data = await scrapeAmazon(keyword, 'com');
     res.json(data);
 });
 
 app.listen(PORT, () => {
-    console.log(`Server running at http://localhost:${PORT}`);
+    console.log(`Servidor rodando na porta ${PORT}`);
 });
