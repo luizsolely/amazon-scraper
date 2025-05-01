@@ -6,13 +6,20 @@ import puppeteer from "puppeteer";
 const app = express();
 const PORT = 3000;
 
+// Instância global do navegador
+let browser;
+
 app.use(cors({
     origin: "http://localhost:5173",
     methods: ["GET"],
     allowedHeaders: ["Content-Type"]
 }));
 
-// Headers específicos por domínio
+async function initBrowser() {
+    browser = await puppeteer.launch({ headless: "new" });
+    console.log("Browser iniciado com sucesso");
+}
+
 function getAmazonHeaders(domain) {
     const base = {
         "Accept-Encoding": "gzip, deflate, br",
@@ -32,62 +39,95 @@ function getAmazonHeaders(domain) {
     };
 }
 
-// Função única com Puppeteer (para ambos domínios)
 async function scrapeAmazon(keyword, domain = 'com.br') {
-    const browser = await puppeteer.launch();
+    // Criar nova página a partir do browser global
     const page = await browser.newPage();
     
-    // Configura headers específicos
+    // Configurações da página
     await page.setExtraHTTPHeaders(getAmazonHeaders(domain));
     await page.setUserAgent(getAmazonHeaders(domain)["User-Agent"]);
-    
-    await page.goto(`https://www.amazon.${domain}/s?k=${encodeURIComponent(keyword)}`, {
-        waitUntil: 'domcontentloaded',
-        timeout: 30000
-    });
 
-    const content = await page.content();
-    const dom = new JSDOM(content);
-    const document = dom.window.document;
-
-    let products = [];
-    document.querySelectorAll('[data-component-type="s-search-result"]').forEach(product => {
-        const title = product.querySelector("h2 span")?.textContent?.trim();
-        const image = product.querySelector("img")?.src;
-        const rating = product.querySelector(".a-icon-star-small span")?.textContent?.trim();
-        const price = product.querySelector(".a-offscreen")?.textContent?.trim();
-
-        if (title && image && price) {
-            products.push({ 
-                title, 
-                image, 
-                rating: rating || "Sem avaliação", 
-                price 
-            });
+    // Bloquear carregamento de imagens
+    await page.setRequestInterception(true);
+    page.on('request', (req) => {
+        if (req.resourceType() === 'image') {
+            req.abort();
+        } else {
+            req.continue();
         }
     });
+    
+    try {
+        await page.goto(`https://www.amazon.${domain}/s?k=${encodeURIComponent(keyword)}`, {
+            waitUntil: 'domcontentloaded',
+            timeout: 30000
+        });
 
-    await browser.close();
-    return products;
+        const content = await page.content();
+        const dom = new JSDOM(content);
+        const document = dom.window.document;
+
+        let products = [];
+        document.querySelectorAll('[data-component-type="s-search-result"]').forEach(product => {
+            const title = product.querySelector("h2 span")?.textContent?.trim();
+            const image = product.querySelector("img")?.src;
+            const rating = product.querySelector(".a-icon-star-small span")?.textContent?.trim();
+            const price = product.querySelector(".a-offscreen")?.textContent?.trim();
+
+            if (title && image && price) {
+                products.push({ 
+                    title, 
+                    image, 
+                    rating: rating || "Sem avaliação", 
+                    price 
+                });
+            }
+        });
+
+        return products;
+    } finally {
+        await page.close();
+    }
 }
 
-// Rotas originais (inalteradas)
 app.get("/scrape-br", async (req, res) => {
     const { keyword } = req.query;
     if (!keyword) return res.status(400).json({ error: "Palavra-chave obrigatória" });
     
-    const data = await scrapeAmazon(keyword, 'com.br');
-    res.json(data);
+    try {
+        const data = await scrapeAmazon(keyword, 'com.br');
+        res.json(data);
+    } catch (error) {
+        console.error("Erro na busca BR:", error);
+        res.status(500).json({ error: "Erro ao processar a requisição" });
+    }
 });
 
 app.get("/scrape-us", async (req, res) => {
     const { keyword } = req.query;
     if (!keyword) return res.status(400).json({ error: "Keyword required" });
     
-    const data = await scrapeAmazon(keyword, 'com');
-    res.json(data);
+    try {
+        const data = await scrapeAmazon(keyword, 'com');
+        res.json(data);
+    } catch (error) {
+        console.error("Erro na busca US:", error);
+        res.status(500).json({ error: "Erro ao processar a requisição" });
+    }
 });
 
-app.listen(PORT, () => {
-    console.log(`Servidor rodando na porta ${PORT}`);
+// Inicializar o browser e depois iniciar o servidor
+initBrowser().then(() => {
+    app.listen(PORT, () => {
+        console.log(`Servidor rodando na porta ${PORT}`);
+    });
+}).catch(error => {
+    console.error("Falha ao iniciar o browser:", error);
+    process.exit(1);
+});
+
+// Fechamento limpo na finalização do servidor
+process.on('SIGINT', async () => {
+    if (browser) await browser.close();
+    process.exit();
 });

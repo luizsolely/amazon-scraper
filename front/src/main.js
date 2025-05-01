@@ -8,6 +8,19 @@ async function fetchData(route, region) {
         return;
     }
 
+    const loadingElement = document.getElementById("loading");
+    const loadingText = document.getElementById("loading-text");
+    const scrapeButtonBR = document.getElementById("scrape-br");
+    const scrapeButtonUS = document.getElementById("scrape-us");
+    const resultsDiv = document.getElementById("results");
+
+    loadingText.textContent = region === "BR" ? "Buscando produtos..." : "Searching products...";
+    
+    loadingElement.style.display = "flex";
+    scrapeButtonBR.disabled = true;
+    scrapeButtonUS.disabled = true;
+    resultsDiv.innerHTML = "";
+
     try {
         const response = await fetch(`http://localhost:3000/${route}?keyword=${encodeURIComponent(keyword)}`);
         const data = await response.json();
@@ -15,20 +28,23 @@ async function fetchData(route, region) {
         displayResults(data, region);
     } catch (error) {
         console.error("Error fetching data:", error);
+        resultsDiv.innerHTML = `<p class="error">Erro ao buscar dados: ${error.message}</p>`;
+    } finally {
+        loadingElement.style.display = "none";
+        scrapeButtonBR.disabled = false;
+        scrapeButtonUS.disabled = false;
     }
 }
 
 function displayResults(products, region) {
     const resultsDiv = document.getElementById("results");
-    resultsDiv.innerHTML = ""; // Clear previous results
-
+    
     if (products.length === 0) {
         resultsDiv.innerHTML = "<p>No results found.</p>";
         return;
     }
 
     products.forEach(({ title, image, rating, price }) => {
-        // Adjust the price symbol and decimal separator according to the region
         const formattedPrice = region === "BR" ? price.replace(".", ",") : price;
         const formattedRating = region === "BR" ? rating.replace(".", ",") : rating;
 
