@@ -62,6 +62,15 @@ To get started with this project, follow these steps:
   ```
 - The backend server will be running on `http://localhost:3000`.
 
+> ⚠️ **Important:** If you encounter an error related to Chrome not being found (e.g., `Could not find Chrome (ver. xxx)`), it means Puppeteer could not locate the browser binary.
+>
+> ✅ To fix this, install Chrome manually for Puppeteer by running:
+> ```
+> npx puppeteer browsers install chrome
+> ```
+> This command downloads a compatible version of Chrome into the correct cache directory (`~/.cache/puppeteer`), resolving the issue.
+
+
 2. To run the frontend:
 
 - In the `front` folder, run:
